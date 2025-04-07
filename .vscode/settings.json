@@ -1,0 +1,45 @@
+{
+    "dotnet.preferCSharpExtension": true,
+    "dotnet.defaultSolution": "InspectorAutoAssigner.sln",
+    "omnisharp.useModernNet": true,
+    "omnisharp.enableRoslynAnalyzers": true,
+    "omnisharp.useGlobalMono": "always", // UnityのMonoを優先して使う
+    "omnisharp.enableEditorConfigSupport": true,
+    "omnisharp.autoStart": true,
+    "omnisharp.projectLoadTimeout": 60,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "files.exclude": {
+        ".plastic": true,
+        ".idea": true,
+        ".cursorignore": true,
+        ".cursor": true,
+        ".vscode": true,
+        "**/*.meta": true,
+        "**/Library": true,
+        "**/Temp": true,
+        "**/obj": true,
+        "**/Build": true,
+        "**/Logs": true,
+        "**/*.DotSettings*": true,
+        "ProjectSettings": true
+    },
+    "search.exclude": {
+        ".plastic": true,
+        ".idea": true,
+        ".cursorignore": true,
+        ".cursor": true,
+        ".vscode": true,
+        "**/*.meta": true,
+        "**/Library": true,
+        "**/Temp": true,
+        "**/obj": true,
+        "**/Build": true,
+        "**/Logs": true,
+        "**/*.csproj": true,
+        "**/*.sln": true,
+        "**/*.DotSettings*": true,
+        "ProjectSettings": true
+    }
+}
