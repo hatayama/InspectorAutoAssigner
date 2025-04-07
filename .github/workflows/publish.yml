@@ -1,0 +1,22 @@
+name: Publish to OpenUPM
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install openupm-cli
+        run: npm install -g openupm-cli
+      - name: Publish to OpenUPM
+        env:
+          OPENUPM_TOKEN: ${{ secrets.OPENUPM_TOKEN }}
+        run: |
+          openupm publish 
