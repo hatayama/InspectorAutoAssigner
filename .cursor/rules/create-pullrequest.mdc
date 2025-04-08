@@ -1,0 +1,31 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## pull request作成手順
+
+### 差分の確認
+- {{マージ先ブランチ}}に関する指定がない場合は、どのブランチに対してPullRequestを作成するか必ず聞き返す
+- `git diff origin/{{マージ先ブランチ}}...HEAD | cat` でマージ先ブランチとの差分を確認
+
+### Pull Request 作成とブラウザでの表示
+- 以下のコマンドでpull requestを作成し、自動的にブラウザで開く
+- PRタイトルおよびPRテンプレートはマージ先との差分をもとに適切な内容にする
+- 指示がない限りDraftでpull requestを作成
+- `{{PRテンプレートを1行に変換}}`の部分はPRテンプレートの内容を`\n`で改行表現した1行の文字列
+- 各セクションを明確に区分
+- 必要な情報を漏れなく記載
+
+--- bash
+git push origin HEAD && \
+echo -e "{{PRテンプレートを1行に変換}}" | \
+gh pr create --draft --title "{{PRタイトル}}" --body-file - && \
+gh pr view --web
+---
+
+- 各セクションを明確に区分
+- 必要な情報を漏れなく記載
+
+#### PRテンプレート
+@pull-request-template.mdc からテンプレート内容を取得すること
