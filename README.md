@@ -1,1 +1,1 @@
-# InspectorLinkBinder
+# InspectorAutoAssigner
