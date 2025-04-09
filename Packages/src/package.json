@@ -1,24 +1,23 @@
 {
-  "name": "com.your-org.inspector-link-binder",
+  "name": "io.github.hatayama.inspectorautoassigner",
   "version": "0.1.0",
-  "displayName": "Inspector Link Binder",
-  "description": "A Unity package for binding Inspector values to other components",
+  "displayName": "InspectorAutoAssigner",
+  "description": "",
   "unity": "2022.3",
   "author": {
-    "name": "Your Name",
-    "email": "your.email@example.com",
-    "url": "https://github.com/your-org/inspector-link-binder"
+    "name": "Masamichi Hatayama",
+    "email": "booqle@gmail.com",
+    "url": "https://github.com/hatayama/InspectorAutoAssigner"
   },
   "dependencies": {
   },
   "keywords": [
-    "inspector",
-    "binding",
-    "unity"
+    "InspectorAutoAssigner",
+    "serializefield"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/inspector-link-binder.git"
+    "url": "https://github.com/hatayama/InspectorAutoAssigner.git"
   }
 } 

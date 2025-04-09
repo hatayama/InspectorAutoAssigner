@@ -205,7 +205,7 @@
       },
       "url": "https://packages.unity.com"
     },
-    "com.your-org.inspector-link-binder": {
+    "io.github.hatayama.inspectorautoassigner": {
       "version": "file:src",
       "depth": 0,
       "source": "embedded",
