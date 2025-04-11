@@ -87,6 +87,8 @@ namespace io.github.hatayama
             {
                 // 子オブジェクトを取得
                 List<GameObject> gameObjects = new List<GameObject>();
+                // 自分自身を最初に追加
+                gameObjects.Add(gameObject);
                 GetChildGameObjects(gameObject.transform, gameObjects);
                 if (gameObjects.Count == 0)
                 {
@@ -101,7 +103,17 @@ namespace io.github.hatayama
                 else
                 {
                     // 変数名と同じ名前の GameObject があるかチェック
-                    GameObject matchingObject = gameObjects.Find(go => go.name == property.name);
+                    GameObject matchingObject = gameObjects.Find(go => {
+                        string propertyName = property.name;
+                        // プレフィックス対策（最初の_より前のすべてを無視）
+                        int underscoreIndex = propertyName.IndexOf('_');
+                        if (underscoreIndex >= 0)
+                        {
+                            propertyName = propertyName.Substring(underscoreIndex + 1);
+                        }
+                        
+                        return go.name == propertyName;
+                    });
                     if (matchingObject != null)
                     {
                         // 名前が一致するオブジェクトが見つかった場合、そのまま代入
@@ -137,10 +149,11 @@ namespace io.github.hatayama
                 Component matchingComponent = Array.Find(components, (comp) =>
                 {
                     string propertyName = property.name;
-                    // private変数の規約対策
-                    if (propertyName[0] == '_')
+                    // プレフィックス対策（最初の_より前のすべてを無視）
+                    int underscoreIndex = propertyName.IndexOf('_');
+                    if (underscoreIndex >= 0)
                     {
-                        propertyName = propertyName.Substring(1);
+                        propertyName = propertyName.Substring(underscoreIndex + 1);
                     }
 
                     return comp.gameObject.name.ToLower() == propertyName.ToLower();
