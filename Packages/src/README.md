@@ -1,19 +1,20 @@
-# Inspector Link Binder
+# AutoAssignment ObjectField
 
-Inspector Link Binderは、UnityのInspectorで値を他のコンポーネントにバインドするためのパッケージなのだ！
+AutoAssignment ObjectFieldは、UnityのInspectorで値を自動で設定するツールです。
 
-## 特徴
+## 使い方
 
-- Inspectorの値を他のコンポーネントに簡単にバインド
-- リアルタイムでの値の同期
-- カスタマイズ可能なバインディングルール
+1. このパッケージをimportすると、InspectorのObjectFieldに虫眼鏡アイコンが表示されます。
+2. 虫眼鏡アイコンをクリックすると、自分自身と子要素を検索し、変数の型にあったコンポーネントを自動で割り当てます。
+3. 変数の型を同じコンポーネントが複数見つかった場合、変数名と一致するコンポーネントを優先的に割り当てます。
+4. 変数名と一致するコンポーネントが複数ある場合は、popupが表示され、選択することができます。
 
 ## インストール方法
 
 ### OpenUPM経由
 
 ```bash
-openupm add com.your-org.inspector-link-binder
+openupm add io.github.hatayama.inspectorautoassigner
 ```
 
 ### Unity Package Manager経由
@@ -23,14 +24,8 @@ openupm add com.your-org.inspector-link-binder
 3. 「Add package from git URL」を選択
 4. 以下のURLを入力：
    ```
-   https://github.com/your-org/inspector-link-binder.git
+   https://github.com/hatayama/InspectorAutoAssigner.git
    ```
-
-## 使い方
-
-1. バインドしたいコンポーネントに`InspectorLinkBinder`コンポーネントを追加
-2. ソースとなるInspectorの値を設定
-3. ターゲットとなるコンポーネントとプロパティを設定
 
 ## ライセンス
 
@@ -38,4 +33,4 @@ MIT License
 
 ## 作者
 
-Your Name 
+Masamichi Hatayama
