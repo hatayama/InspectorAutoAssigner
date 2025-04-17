@@ -15,13 +15,6 @@ InspectorAutoAssigner is a tool that automatically assigns values in the Unity I
 
 
 ## Installation
-
-### OpenUPM via
-
-```bash
-openupm add io.github.hatayama.inspectorautoassigner
-```
-
 ### Unity Package Manager via
 
 1. Open Window > Package Manager
@@ -31,6 +24,28 @@ openupm add io.github.hatayama.inspectorautoassigner
    ```
    https://github.com/hatayama/InspectorAutoAssigner.git?path=/Packages/src
    ```
+
+### OpenUPM via
+
+### How to use UPM with Scoped registry in Unity Package Manager
+1. Open the Project Settings window and navigate to the Package Manager page.
+2. Add the following entry to the Scoped Registries list:
+```
+Name：OpenUPM
+URL: https://package.openupm.com
+Scope(s)：io.github.hatayama
+```
+![](https://github.com/hatayama/InspectorAutoAssigner/blob/main/Assets/Images/4.png?raw=true)
+
+3. Open the Package Manager window, navigate to the "Masamichi Hatayama" page in the My Registries section.
+![](https://github.com/hatayama/InspectorAutoAssigner/blob/main/Assets/Images/5.png?raw=true)
+
+
+### Command
+```bash
+openupm add io.github.hatayama.inspectorautoassigner
+```
+
 
 ## License
 
