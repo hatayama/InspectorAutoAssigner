@@ -1,6 +1,6 @@
 # InspectorAutoAssigner
 [![license](https://img.shields.io/badge/LICENSE-MIT-green.svg)](LICENSE.md)
-![](https://img.shields.io/badge/Unity-2021.3+-57b9d3.svg?style=flat&logo=unity)
+![](https://img.shields.io/badge/Unity-2020.3+-57b9d3.svg?style=flat&logo=unity)
 [![](https://img.shields.io/twitter/follow/ssr_maguro.svg?label=Follow&style=social)](https://x.com/ssr_maguro)
 
 InspectorAutoAssigner is a tool that automatically assigns values in the Unity Inspector.
