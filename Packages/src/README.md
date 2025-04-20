@@ -38,10 +38,10 @@ Name：OpenUPM
 URL: https://package.openupm.com
 Scope(s)：io.github.hatayama
 ```
-![](https://github.com/hatayama/InspectorAutoAssigner/blob/main/Assets/Images/4.png?raw=true)
+![](https://github.com/hatayama/_Docs/blob/main/Images/upm_pckage1.png?raw=true)
 
-3. Open the Package Manager window, navigate to the "Masamichi Hatayama" page in the My Registries section.
-![](https://github.com/hatayama/InspectorAutoAssigner/blob/main/Assets/Images/5.png?raw=true)
+3. Open the Package Manager window, navigate to the "hatayama" page in the My Registries section.
+![](https://github.com/hatayama/_Docs/blob/main/Images/upm_pckage2.png?raw=true)
 
 
 ### Command
