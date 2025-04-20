@@ -743,10 +743,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e469a1052e5c042d591af1aeb79ce013, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  image: {fileID: 1336492871}
-  collider: {fileID: 1060079549}
-  _transform: {fileID: 1691444191}
-  _mygo: {fileID: 2116114247}
+  image: {fileID: 0}
+  boxCollider: {fileID: 0}
+  _transform: {fileID: 0}
+  _mygo: {fileID: 0}
 --- !u!1 &1782774149
 GameObject:
   m_ObjectHideFlags: 0
