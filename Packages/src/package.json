@@ -1,9 +1,11 @@
 {
   "name": "io.github.hatayama.inspectorautoassigner",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "displayName": "InspectorAutoAssigner",
-  "description": "",
+  "description": "InspectorAutoAssigner is a tool that automatically assigns values in the Unity Inspector.",
   "unity": "2020.3",
+  "documentationUrl": "https://github.com/hatayama/InspectorAutoAssigner/blob/main/Packages/src/README.md",
+  "licensesUrl": "https://github.com/hatayama/InspectorAutoAssigner/blob/main/LICENSE.md",
   "author": {
     "name": "hatayama",
     "email": "booqle@gmail.com",
