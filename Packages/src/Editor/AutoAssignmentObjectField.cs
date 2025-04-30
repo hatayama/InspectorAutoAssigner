@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 
 namespace io.github.hatayama
 {
@@ -9,10 +11,50 @@ namespace io.github.hatayama
     [CustomPropertyDrawer(typeof(Component), true)]
     public class AutoAssignmentObjectField : PropertyDrawer
     {
+        public override VisualElement CreatePropertyGUI(SerializedProperty property)
+        {
+            Type fieldType = fieldInfo.FieldType;
+            if (fieldType.IsArray || (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)))
+            {
+                return new PropertyField(property);
+            }
+
+            VisualElement container = new VisualElement();
+            container.style.flexDirection = FlexDirection.Row;
+
+            PropertyField propertyField = new PropertyField(property);
+            propertyField.style.flexGrow = 1;
+            container.Add(propertyField);
+
+            Button searchButton = new Button();
+            float buttonSize = EditorGUIUtility.singleLineHeight;
+            searchButton.style.width = buttonSize;
+            searchButton.style.height = buttonSize;
+            searchButton.style.marginRight = 0;
+            searchButton.style.alignItems = Align.Center;
+            Image iconImage = new Image
+            {
+                image = EditorGUIUtility.FindTexture("Search Icon"),
+                scaleMode = ScaleMode.ScaleToFit
+            };
+            iconImage.style.width = buttonSize * 0.7f;
+            iconImage.style.height = buttonSize * 0.7f;
+
+            searchButton.Clear();
+            searchButton.Add(iconImage);
+
+            searchButton.clicked += () => 
+            { 
+                HandleButtonPress(property, fieldInfo.FieldType, searchButton.worldBound);
+            };
+            container.Add(searchButton);
+            
+            return container;
+        }
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             Type fieldType = fieldInfo.FieldType;
-            // フィールドが配列またはリストの場合、デフォルトの描画を行い、カスタムボタンを追加しない
             if (fieldType.IsArray || (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)))
             {
                 EditorGUI.PropertyField(position, property, label, true);
@@ -25,64 +67,44 @@ namespace io.github.hatayama
 
         private void DrawObjectFieldWithButton(Rect position, SerializedProperty property, GUIContent label, Type fieldType)
         {
-            // プロパティの開始
             EditorGUI.BeginProperty(position, label, property);
 
-            // ラベルとフィールドの Rect を取得
             position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
-            // インデントレベルを保存して0に設定（インデントの影響を受けないように）
             int indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
 
-            // ボタンの幅を定義
-            float buttonWidth = 25;
+            const float buttonSize = 24f;
+            float buttonWidth = buttonSize;
+            float objectFieldWidth = position.width - buttonWidth;
 
-            // フィールド全体の幅
-            float fieldWidth = position.width;
-
-            // ObjectField の幅を計算（ボタンの幅を引く）
-            float objectFieldWidth = fieldWidth - buttonWidth;
-
-            // ObjectField の描画エリア
             Rect objectFieldRect = new Rect(position.x, position.y, objectFieldWidth, position.height);
-
-            // ボタンの描画エリア
             Rect buttonRect = new Rect(position.x + objectFieldWidth, position.y, buttonWidth, position.height);
 
-            // ObjectField を描画
             EditorGUI.PropertyField(objectFieldRect, property, GUIContent.none);
 
-            // ボタンを描画
-            if (GUI.Button(buttonRect, EditorGUIUtility.FindTexture("Search Icon")))
+            GUIContent searchIconContent = EditorGUIUtility.IconContent("Search Icon");
+            if (GUI.Button(buttonRect, searchIconContent))
             {
-                // ボタンが押されたときの処理
                 HandleButtonPress(property, fieldType, buttonRect);
             }
 
-            // インデントレベルを元に戻す
             EditorGUI.indentLevel = indent;
 
-            // プロパティの終了
             EditorGUI.EndProperty();
         }
 
-        /// <summary>
-        /// ボタンが押されたときの処理
-        /// </summary>
-        /// <param name="property">対象の SerializedProperty</param>
-        /// <param name="fieldType">フィールドの型</param>
-        /// <param name="buttonRect">ボタンの Rect</param>
-        private void HandleButtonPress(SerializedProperty property, Type fieldType, Rect buttonRect)
+        private void HandleButtonPress(SerializedProperty property, Type fieldType, Rect buttonWorldBound)
         {
             if (fieldType == typeof(GameObject) || fieldType.IsSubclassOf(typeof(GameObject)))
             {
-                HandleGameObjectAssignment(property, buttonRect);
+                HandleGameObjectAssignment(property, buttonWorldBound);
                 return;
             }
+            
             if (fieldType.IsSubclassOf(typeof(Component)))
             {
-                HandleComponentAssignment(property, fieldType, buttonRect);
+                HandleComponentAssignment(property, fieldType, buttonWorldBound);
                 return;
             }
         }
@@ -100,7 +122,7 @@ namespace io.github.hatayama
 
             if (gameObjects.Count == 0)
             {
-                PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup("GameObject が見つかりませんでした。"));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup("GameObject が見つかりませんでした."));
                 return;
             }
 
@@ -118,7 +140,7 @@ namespace io.github.hatayama
                 return;
             }
 
-            PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, gameObjects.ToArray()));
+            UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, gameObjects.ToArray()));
         }
 
         private void HandleComponentAssignment(SerializedProperty property, Type fieldType, Rect buttonRect)
@@ -132,7 +154,7 @@ namespace io.github.hatayama
             Component[] components = gameObject.GetComponentsInChildren(fieldType, true);
             if (components == null || components.Length == 0)
             {
-                PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした。"));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした."));
                 return;
             }
 
@@ -150,7 +172,7 @@ namespace io.github.hatayama
             }
             else
             {
-                PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, components));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, components));
             }
         }
 
@@ -160,26 +182,17 @@ namespace io.github.hatayama
             return underscoreIndex >= 0 ? propertyName.Substring(underscoreIndex + 1) : propertyName;
         }
 
-        /// <summary>
-        /// プロパティに値を代入する
-        /// </summary>
         private void AssignValue(SerializedProperty property, UnityEngine.Object value)
         {
-            // 値を代入
             property.objectReferenceValue = value;
-            // 変更を適用
             property.serializedObject.ApplyModifiedProperties();
         }
 
-        /// <summary>
-        /// 子オブジェクトを取得する（再帰）
-        /// </summary>
         private void GetChildGameObjects(Transform parent, List<GameObject> list)
         {
             foreach (Transform child in parent)
             {
                 list.Add(child.gameObject);
-                // 子孫も取得する場合は再帰呼び出し
                 GetChildGameObjects(child, list);
             }
         }
