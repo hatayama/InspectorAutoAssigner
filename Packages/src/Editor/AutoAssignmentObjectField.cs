@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 
-namespace io.github.hatayama
+namespace io.github.hatayama.InspectorAutoAssigner
 {
     /// <summary>
     /// GameObject または Component 型のプロパティフィールドの右側に自動割り当てボタンを追加するカスタムプロパティドロワーです。

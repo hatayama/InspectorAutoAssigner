@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace io.github.hatayama
+namespace io.github.hatayama.InspectorAutoAssigner
 {
     // カスタムポップアップウィンドウクラス
     public class AutoAssignmentObjectSelectorPopup : PopupWindowContent
