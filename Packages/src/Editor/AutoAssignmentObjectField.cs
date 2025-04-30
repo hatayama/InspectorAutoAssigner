@@ -19,6 +19,9 @@ namespace io.github.hatayama
     [CustomPropertyDrawer(typeof(Component), true)]
     public class AutoAssignmentObjectField : PropertyDrawer
     {
+        // IMGUI用のボタンスタイルをキャッシュするための変数やで
+        private GUIStyle _searchButtonStyle;
+
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             Type fieldType = fieldInfo.FieldType;
@@ -38,15 +41,16 @@ namespace io.github.hatayama
             float buttonSize = EditorGUIUtility.singleLineHeight;
             searchButton.style.width = buttonSize;
             searchButton.style.height = buttonSize;
-            searchButton.style.marginRight = 0;
             searchButton.style.alignItems = Align.Center;
+
             Image iconImage = new Image
             {
                 image = EditorGUIUtility.FindTexture("Search Icon"),
                 scaleMode = ScaleMode.ScaleToFit
             };
-            iconImage.style.width = buttonSize * 0.7f;
-            iconImage.style.height = buttonSize * 0.7f;
+            // 元のコードに合わせてアイコンサイズ調整を削除
+            iconImage.style.width = buttonSize * 0.8f;
+            iconImage.style.height = buttonSize * 0.8f;
 
             searchButton.Clear();
             searchButton.Add(iconImage);
@@ -77,27 +81,48 @@ namespace io.github.hatayama
         {
             EditorGUI.BeginProperty(position, label, property);
 
+            // ラベル部分の描画
             position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
             int indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
 
-            const float buttonSize = 24f;
-            float buttonWidth = buttonSize;
-            float objectFieldWidth = position.width - buttonWidth;
+            float buttonSize = EditorGUIUtility.singleLineHeight;
+            float buttonWidth = buttonSize; // ボタンの幅は高さと同じに
+            float objectFieldWidth = position.width - buttonWidth; // オブジェクトフィールドの幅を計算
 
+            // 各コントロールの描画範囲を計算や
             Rect objectFieldRect = new Rect(position.x, position.y, objectFieldWidth, position.height);
             Rect buttonRect = new Rect(position.x + objectFieldWidth, position.y, buttonWidth, position.height);
 
+            // オブジェクトフィールドの描画
             EditorGUI.PropertyField(objectFieldRect, property, GUIContent.none);
 
-            GUIContent searchIconContent = EditorGUIUtility.IconContent("Search Icon");
-            if (GUI.Button(buttonRect, searchIconContent))
+            if (_searchButtonStyle == null)
             {
+                int padding = 2;
+                _searchButtonStyle = new GUIStyle(GUI.skin.button)
+                {
+                    padding = new RectOffset(padding, padding, padding, padding), // パディングを詰めてアイコンを大きく見せる
+                    alignment = TextAnchor.MiddleCenter, // アイコンを中央に配置
+                    imagePosition = ImagePosition.ImageOnly // アイコンだけ表示する
+                };
+            }
+
+            // アイコンを取得
+            Texture2D searchIcon = EditorGUIUtility.FindTexture("Search Icon");
+            GUIContent searchButtonContent = new GUIContent(searchIcon); // アイコンだけのGUIContentを作成
+
+            // カスタムスタイルでボタンを描画するんや
+            if (GUI.Button(buttonRect, searchButtonContent, _searchButtonStyle))
+            {
+                // ボタンが押されたらポップアップ表示処理を呼ぶんや
                 HandleButtonPress(property, fieldType, buttonRect);
             }
 
-            EditorGUI.indentLevel = indent;
+            // ---- ここまでがアイコンボタンの描画処理や ----
+
+            EditorGUI.indentLevel = indent; // インデントを元に戻す
 
             EditorGUI.EndProperty();
         }
@@ -140,27 +165,25 @@ namespace io.github.hatayama
         {
             GameObject targetGameObject = component.gameObject;
 
-            List<Component> allComponents = new List<Component>();
-            targetGameObject.GetComponentsInChildren(true, allComponents);
+            Component[] foundComponents = targetGameObject.GetComponentsInChildren(fieldType, true);
+            List<Component> allComponents = new List<Component>(foundComponents);
 
-            List<Component> filteredComponents = allComponents.Where(c => fieldType.IsAssignableFrom(c.GetType())).ToList();
-
-            if (filteredComponents.Count == 0)
+            if (allComponents.Count == 0)
             {
                 UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした."));
                 return;
             }
 
-            if (filteredComponents.Count == 1)
+            if (allComponents.Count == 1)
             {
-                AssignValue(property, filteredComponents[0]);
+                AssignValue(property, allComponents[0]);
                 return;
             }
 
             ProcessAssignmentCandidates<Component>(
                 property,
                 buttonRect,
-                filteredComponents,
+                allComponents,
                 fieldType.Name,
                 (comp, name) => string.Equals(comp.gameObject.name, name, StringComparison.OrdinalIgnoreCase)
             );
@@ -192,7 +215,7 @@ namespace io.github.hatayama
                 return;
             }
 
-            if (candidateList.Count > 0)
+            if (candidateList.Count > 1)
             {
                 UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, candidateList.ToArray()));
             }
@@ -217,13 +240,9 @@ namespace io.github.hatayama
         /// <param name="list">GameObjectを追加するリスト</param>
         private void GetSelfAndChildGameObjects(Transform targetTransform, List<GameObject> list)
         {
-            // まず自分自身を追加
             list.Add(targetTransform.gameObject);
-
-            // 次に、それぞれの子に対して再帰的にこのメソッドを呼び出す
             foreach (Transform child in targetTransform)
             {
-                // 再帰呼び出しで子とその子孫を追加
                 GetSelfAndChildGameObjects(child, list);
             }
         }
