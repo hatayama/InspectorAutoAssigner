@@ -9,17 +9,17 @@ using UnityEditor.UIElements;
 namespace io.github.hatayama.InspectorAutoAssigner
 {
     /// <summary>
-    /// GameObject または Component 型のプロパティフィールドの右側に自動割り当てボタンを追加するカスタムプロパティドロワーです。
-    /// UnityエディタのInspector表示モードに応じて、以下のメソッドが呼び出されます。
-    /// - UI Toolkit が有効な場合: CreatePropertyGUI() が呼び出されます (OnGUI() は無視されます)。
-    /// - 従来の IMGUI が有効な場合: OnGUI() が呼び出されます (CreatePropertyGUI() は無視されます)。
-    /// 他のinspector拡張系のOSSとの互換性のため、2つの処理を用意しています。
+    /// Custom property drawer that adds an automatic assignment button to the right of property fields of type GameObject or Component.
+    /// Depending on the Unity editor's Inspector display mode, the following methods are called:
+    /// - If UI Toolkit is enabled: CreatePropertyGUI() is called (OnGUI() is ignored).
+    /// - If the conventional IMGUI is enabled: OnGUI() is called (CreatePropertyGUI() is ignored).
+    /// Two processes are prepared for compatibility with other inspector extension OSS.
     /// </summary>
     [CustomPropertyDrawer(typeof(GameObject), true)]
     [CustomPropertyDrawer(typeof(Component), true)]
     public class AutoAssignmentObjectField : PropertyDrawer
     {
-        // IMGUI用のボタンスタイルをキャッシュするための変数やで
+        // Variable to cache the button style for IMGUI.
         private GUIStyle _searchButtonStyle;
 
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
@@ -48,7 +48,7 @@ namespace io.github.hatayama.InspectorAutoAssigner
                 image = EditorGUIUtility.FindTexture("Search Icon"),
                 scaleMode = ScaleMode.ScaleToFit
             };
-            // 元のコードに合わせてアイコンサイズ調整を削除
+            // Removed icon size adjustment to match the original code.
             iconImage.style.width = buttonSize * 0.8f;
             iconImage.style.height = buttonSize * 0.8f;
 
@@ -81,21 +81,21 @@ namespace io.github.hatayama.InspectorAutoAssigner
         {
             EditorGUI.BeginProperty(position, label, property);
 
-            // ラベル部分の描画
+            // Draw the label part.
             position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
             int indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
 
             float buttonSize = EditorGUIUtility.singleLineHeight;
-            float buttonWidth = buttonSize; // ボタンの幅は高さと同じに
-            float objectFieldWidth = position.width - buttonWidth; // オブジェクトフィールドの幅を計算
+            float buttonWidth = buttonSize; // Button width is the same as height
+            float objectFieldWidth = position.width - buttonWidth; // Calculate the object field width
 
-            // 各コントロールの描画範囲を計算や
+            // Calculate the drawing range for each control.
             Rect objectFieldRect = new Rect(position.x, position.y, objectFieldWidth, position.height);
             Rect buttonRect = new Rect(position.x + objectFieldWidth, position.y, buttonWidth, position.height);
 
-            // オブジェクトフィールドの描画
+            // Draw the object field.
             EditorGUI.PropertyField(objectFieldRect, property, GUIContent.none);
 
             if (_searchButtonStyle == null)
@@ -103,26 +103,26 @@ namespace io.github.hatayama.InspectorAutoAssigner
                 int padding = 2;
                 _searchButtonStyle = new GUIStyle(GUI.skin.button)
                 {
-                    padding = new RectOffset(padding, padding, padding, padding), // パディングを詰めてアイコンを大きく見せる
-                    alignment = TextAnchor.MiddleCenter, // アイコンを中央に配置
-                    imagePosition = ImagePosition.ImageOnly // アイコンだけ表示する
+                    padding = new RectOffset(padding, padding, padding, padding), // Reduce padding to make the icon appear larger.
+                    alignment = TextAnchor.MiddleCenter, // Center the icon.
+                    imagePosition = ImagePosition.ImageOnly // Display only the icon.
                 };
             }
 
-            // アイコンを取得
+            // Get the icon.
             Texture2D searchIcon = EditorGUIUtility.FindTexture("Search Icon");
-            GUIContent searchButtonContent = new GUIContent(searchIcon); // アイコンだけのGUIContentを作成
+            GUIContent searchButtonContent = new GUIContent(searchIcon); // Create GUIContent with only the icon.
 
-            // カスタムスタイルでボタンを描画するんや
+            // Draw the button with a custom style.
             if (GUI.Button(buttonRect, searchButtonContent, _searchButtonStyle))
             {
-                // ボタンが押されたらポップアップ表示処理を呼ぶんや
+                // Call the popup display process when the button is pressed.
                 HandleButtonPress(property, fieldType, buttonRect);
             }
 
-            // ---- ここまでがアイコンボタンの描画処理や ----
+            // ---- End of icon button drawing process ----
 
-            EditorGUI.indentLevel = indent; // インデントを元に戻す
+            EditorGUI.indentLevel = indent; // Restore the indent level.
 
             EditorGUI.EndProperty();
         }
@@ -170,7 +170,7 @@ namespace io.github.hatayama.InspectorAutoAssigner
 
             if (allComponents.Count == 0)
             {
-                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした."));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} component not found."));
                 return;
             }
 
@@ -201,7 +201,7 @@ namespace io.github.hatayama.InspectorAutoAssigner
 
             if (candidateList.Count == 0)
             {
-                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{typeName} が見つかりませんでした."));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{typeName} not found."));
                 return;
             }
 
@@ -234,10 +234,10 @@ namespace io.github.hatayama.InspectorAutoAssigner
         }
 
         /// <summary>
-        /// 指定されたTransformを持つGameObject自身と、その全ての子孫GameObjectをリストに追加する（再帰処理）。
+        /// Adds the GameObject itself and all its descendant GameObjects to the list (recursive process).
         /// </summary>
-        /// <param name="targetTransform">検索を開始するTransform</param>
-        /// <param name="list">GameObjectを追加するリスト</param>
+        /// <param name="targetTransform">The Transform to start searching from.</param>
+        /// <param name="list">The list to add GameObjects to.</param>
         private void GetSelfAndChildGameObjects(Transform targetTransform, List<GameObject> list)
         {
             list.Add(targetTransform.gameObject);
