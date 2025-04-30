@@ -2,11 +2,19 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UIElements;
 using UnityEditor.UIElements;
 
 namespace io.github.hatayama
 {
+    /// <summary>
+    /// GameObject または Component 型のプロパティフィールドの右側に自動割り当てボタンを追加するカスタムプロパティドロワーです。
+    /// UnityエディタのInspector表示モードに応じて、以下のメソッドが呼び出されます。
+    /// - UI Toolkit が有効な場合: CreatePropertyGUI() が呼び出されます (OnGUI() は無視されます)。
+    /// - 従来の IMGUI が有効な場合: OnGUI() が呼び出されます (CreatePropertyGUI() は無視されます)。
+    /// 他のinspector拡張系のOSSとの互換性のため、2つの処理を用意しています。
+    /// </summary>
     [CustomPropertyDrawer(typeof(GameObject), true)]
     [CustomPropertyDrawer(typeof(Component), true)]
     public class AutoAssignmentObjectField : PropertyDrawer
@@ -14,7 +22,7 @@ namespace io.github.hatayama
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
             Type fieldType = fieldInfo.FieldType;
-            if (fieldType.IsArray || (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)))
+            if (IsListOrArray(fieldType))
             {
                 return new PropertyField(property);
             }
@@ -55,7 +63,7 @@ namespace io.github.hatayama
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             Type fieldType = fieldInfo.FieldType;
-            if (fieldType.IsArray || (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)))
+            if (IsListOrArray(fieldType))
             {
                 EditorGUI.PropertyField(position, property, label, true);
             }
@@ -96,83 +104,97 @@ namespace io.github.hatayama
 
         private void HandleButtonPress(SerializedProperty property, Type fieldType, Rect buttonWorldBound)
         {
+            UnityEngine.Object targetObject = property.serializedObject.targetObject;
+            if (!(targetObject is Component component)) return;
+
             if (fieldType == typeof(GameObject) || fieldType.IsSubclassOf(typeof(GameObject)))
             {
-                HandleGameObjectAssignment(property, buttonWorldBound);
+                HandleGameObjectAssignment(property, buttonWorldBound, component);
                 return;
             }
             
-            if (fieldType.IsSubclassOf(typeof(Component)))
+            if (typeof(Component).IsAssignableFrom(fieldType))
             {
-                HandleComponentAssignment(property, fieldType, buttonWorldBound);
+                HandleComponentAssignment(property, fieldType, buttonWorldBound, component);
                 return;
             }
         }
 
-        private void HandleGameObjectAssignment(SerializedProperty property, Rect buttonRect)
+        private void HandleGameObjectAssignment(SerializedProperty property, Rect buttonRect, Component component)
         {
-            UnityEngine.Object targetObject = property.serializedObject.targetObject;
-            if (!(targetObject is MonoBehaviour)) return;
+            GameObject targetGameObject = component.gameObject;
 
-            MonoBehaviour monoBehaviour = (MonoBehaviour)targetObject;
-            GameObject gameObject = monoBehaviour.gameObject;
+            List<GameObject> gameObjects = new List<GameObject>();
+            GetSelfAndChildGameObjects(targetGameObject.transform, gameObjects);
 
-            List<GameObject> gameObjects = new List<GameObject> { gameObject };
-            GetChildGameObjects(gameObject.transform, gameObjects);
-
-            if (gameObjects.Count == 0)
-            {
-                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup("GameObject が見つかりませんでした."));
-                return;
-            }
-
-            if (gameObjects.Count == 1)
-            {
-                AssignValue(property, gameObjects[0]);
-                return;
-            }
-
-            string cleanName = GetCleanPropertyName(property.name);
-            GameObject matchingObject = gameObjects.Find((GameObject go) => string.Equals(go.name, cleanName, StringComparison.OrdinalIgnoreCase));
-            if (matchingObject != null)
-            {
-                AssignValue(property, matchingObject);
-                return;
-            }
-
-            UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, gameObjects.ToArray()));
+            ProcessAssignmentCandidates<GameObject>(
+                property,
+                buttonRect,
+                gameObjects,
+                "GameObject",
+                (go, name) => string.Equals(go.name, name, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
-        private void HandleComponentAssignment(SerializedProperty property, Type fieldType, Rect buttonRect)
+        private void HandleComponentAssignment(SerializedProperty property, Type fieldType, Rect buttonRect, Component component)
         {
-            UnityEngine.Object targetObject = property.serializedObject.targetObject;
-            if (!(targetObject is MonoBehaviour)) return;
+            GameObject targetGameObject = component.gameObject;
 
-            MonoBehaviour monoBehaviour = (MonoBehaviour)targetObject;
-            GameObject gameObject = monoBehaviour.gameObject;
+            List<Component> allComponents = new List<Component>();
+            targetGameObject.GetComponentsInChildren(true, allComponents);
 
-            Component[] components = gameObject.GetComponentsInChildren(fieldType, true);
-            if (components == null || components.Length == 0)
+            List<Component> filteredComponents = allComponents.Where(c => fieldType.IsAssignableFrom(c.GetType())).ToList();
+
+            if (filteredComponents.Count == 0)
             {
                 UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした."));
                 return;
             }
 
-            if (components.Length == 1)
+            if (filteredComponents.Count == 1)
             {
-                AssignValue(property, components[0]);
+                AssignValue(property, filteredComponents[0]);
+                return;
+            }
+
+            ProcessAssignmentCandidates<Component>(
+                property,
+                buttonRect,
+                filteredComponents,
+                fieldType.Name,
+                (comp, name) => string.Equals(comp.gameObject.name, name, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        private void ProcessAssignmentCandidates<T>(
+            SerializedProperty property,
+            Rect buttonRect,
+            IEnumerable<T> candidates,
+            string typeName,
+            Func<T, string, bool> nameMatcher
+        ) where T : UnityEngine.Object
+        {
+            List<T> candidateList = candidates.ToList();
+
+            if (candidateList.Count == 0)
+            {
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{typeName} が見つかりませんでした."));
                 return;
             }
 
             string cleanName = GetCleanPropertyName(property.name);
-            Component matchingComponent = Array.Find(components, comp => string.Equals(comp.gameObject.name, cleanName, StringComparison.OrdinalIgnoreCase));
-            if (matchingComponent != null)
+
+            T matchingCandidate = candidateList.FirstOrDefault(c => nameMatcher(c, cleanName));
+
+            if (matchingCandidate != null)
             {
-                AssignValue(property, matchingComponent);
+                AssignValue(property, matchingCandidate);
+                return;
             }
-            else
+
+            if (candidateList.Count > 0)
             {
-                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, components));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, candidateList.ToArray()));
             }
         }
 
@@ -188,13 +210,27 @@ namespace io.github.hatayama
             property.serializedObject.ApplyModifiedProperties();
         }
 
-        private void GetChildGameObjects(Transform parent, List<GameObject> list)
+        /// <summary>
+        /// 指定されたTransformを持つGameObject自身と、その全ての子孫GameObjectをリストに追加する（再帰処理）。
+        /// </summary>
+        /// <param name="targetTransform">検索を開始するTransform</param>
+        /// <param name="list">GameObjectを追加するリスト</param>
+        private void GetSelfAndChildGameObjects(Transform targetTransform, List<GameObject> list)
         {
-            foreach (Transform child in parent)
+            // まず自分自身を追加
+            list.Add(targetTransform.gameObject);
+
+            // 次に、それぞれの子に対して再帰的にこのメソッドを呼び出す
+            foreach (Transform child in targetTransform)
             {
-                list.Add(child.gameObject);
-                GetChildGameObjects(child, list);
+                // 再帰呼び出しで子とその子孫を追加
+                GetSelfAndChildGameObjects(child, list);
             }
+        }
+
+        private bool IsListOrArray(Type type)
+        {
+            return type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>));
         }
     }
 }
