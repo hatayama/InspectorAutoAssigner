@@ -1,25 +1,25 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace io.github.hatayama
+namespace io.github.hatayama.InspectorAutoAssigner
 {
-    // カスタムポップアップウィンドウクラス
+    // Custom popup window class.
     public class AutoAssignmentObjectSelectorPopup : PopupWindowContent
     {
-        private const int MaxVisibleItems = 10; // 最大表示アイテム数
-        private const float ItemHeight = 20f; // 各アイテムの高さ
+        private const int MaxVisibleItems = 10; // Maximum number of visible items.
+        private const float ItemHeight = 20f; // Height of each item.
         private const float AssignBtnWidth = 30f;
         private const float ScrollMargin = 25f;
-        private const float ItemSpacing = 2f; // アイテム間の間隔
-        private const float BottomMargin = 5f; // 下部の余白
-        private const float NonScrollMargin = 10f; // スクロールなしの場合のマージン
-        private const float NonScrollMarginForWidth = 30f; // 幅計算用のスクロールなしマージン
+        private const float ItemSpacing = 2f; // Item spacing.
+        private const float BottomMargin = 5f; // Bottom margin.
+        private const float NonScrollMargin = 10f; // Margin for non-scrollable case.
+        private const float NonScrollMarginForWidth = 30f; // Margin for width calculation in non-scrollable case.
         private const string ArrowTexturePath = "Packages/io.github.hatayama.inspectorautoassigner/Editor/Images/arrow.png";
 
         private SerializedProperty _property;
         private Object[] _objects;
         private Vector2 _scrollPos;
-        private float _windowWidth; // ウィンドウの幅
+        private float _windowWidth; // Window width.
         private bool _needsScroll;
         private Texture2D _arrowTexture;
 
@@ -28,25 +28,25 @@ namespace io.github.hatayama
             _property = property;
             _objects = objects;
             
-            // UPM形式パスでテクスチャを読み込み
+            // Load texture using UPM path format
             _arrowTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(ArrowTexturePath);
 
-            // スクロールが必要か判定
+            // Determine if scrolling is needed.
             _needsScroll = _objects.Length > MaxVisibleItems;
-            // ウィンドウの幅を計算
+            // Calculate the window width.
             CalculateWindowWidth();
         }
 
         public override Vector2 GetWindowSize()
         {
             int itemCount = Mathf.Min(_objects.Length, MaxVisibleItems);
-            float windowHeight = (itemCount * ItemHeight) + ((itemCount - 1) * ItemSpacing) + BottomMargin; // アイテム高さ + アイテム間隔 + 下部余白
+            float windowHeight = (itemCount * ItemHeight) + ((itemCount - 1) * ItemSpacing) + BottomMargin; // Item height + item spacing + bottom margin.
             return new Vector2(_windowWidth, windowHeight);
         }
 
         public override void OnGUI(Rect rect)
         {
-            // メニュー外をクリックしたらウィンドウを閉じる
+            // Close the window if clicked outside the menu.
             if (Event.current.type == EventType.MouseDown && !rect.Contains(Event.current.mousePosition))
             {
                 editorWindow.Close();
@@ -61,16 +61,16 @@ namespace io.github.hatayama
             {
                 EditorGUILayout.BeginHorizontal();
 
-                // 緑枠（矢印）ボタンを先に表示
+                // Display the green frame (arrow) button first.
                 if (GUILayout.Button(new GUIContent(_arrowTexture), GUILayout.Width(AssignBtnWidth), GUILayout.Height(ItemHeight)))
                 {
                     AssignValue(_property, _objects[i]);
                     editorWindow.Close();
                 }
 
-                // 赤枠（オブジェクト名）ボタンを後に表示
+                // Display the red frame (object name) button later.
                 float margin = _needsScroll ? ScrollMargin : NonScrollMargin;
-                var width = _windowWidth - AssignBtnWidth - margin; // ウィンドウ幅 - 代入ボタン幅 - 余白
+                var width = _windowWidth - AssignBtnWidth - margin; // Window width - assignment button width - margin.
                 if (GUILayout.Button(_objects[i].name, GUILayout.Width(width), GUILayout.Height(ItemHeight)))
                 {
                     EditorGUIUtility.PingObject(_objects[i]);
@@ -87,7 +87,7 @@ namespace io.github.hatayama
 
         private void CalculateWindowWidth()
         {
-            // オブジェクト名の最大幅を計算
+            // Calculate the maximum width of the object name.
             float maxNameWidth = 0f;
             GUIStyle buttonStyle = GUI.skin.button;
             foreach (Object obj in _objects)
@@ -100,21 +100,21 @@ namespace io.github.hatayama
                 }
             }
 
-            // 総ウィンドウ幅を計算（オブジェクト名ボタン + 代入ボタン + マージン）
+            // Calculate the total window width (object name button + assignment button + margin).
             float margin = _needsScroll ? ScrollMargin : NonScrollMarginForWidth;
-            _windowWidth = maxNameWidth + AssignBtnWidth + margin; // 代入ボタン幅 + 余白
+            _windowWidth = maxNameWidth + AssignBtnWidth + margin; // Assignment button width + margin.
         }
 
         private void AssignValue(SerializedProperty property, Object value)
         {
-            // 値を代入
+            // Assign the value.
             property.objectReferenceValue = value;
-            // 変更を適用
+            // Apply the changes.
             property.serializedObject.ApplyModifiedProperties();
         }
     }
 
-    // 見つからなかった場合のポップアップウィンドウクラス
+    // Popup window class for when nothing is found.
     public class AutoAssignmentMessagePopup : PopupWindowContent
     {
         private string _message;
@@ -128,12 +128,12 @@ namespace io.github.hatayama
         {
             GUIStyle style = GUI.skin.label;
             Vector2 size = style.CalcSize(new GUIContent(_message));
-            return new Vector2(size.x + 20f, size.y + 20f); // 余裕を持たせる
+            return new Vector2(size.x + 20f, size.y + 20f); // Add some padding.
         }
 
         public override void OnGUI(Rect rect)
         {
-            // メッセージを中央揃えで表示
+            // Display the message centered.
             GUIStyle style = new GUIStyle(GUI.skin.label);
             style.alignment = TextAnchor.MiddleCenter;
             GUILayout.FlexibleSpace();

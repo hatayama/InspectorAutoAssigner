@@ -2,18 +2,72 @@ using UnityEngine;
 using UnityEditor;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine.UIElements;
+using UnityEditor.UIElements;
 
-namespace io.github.hatayama
+namespace io.github.hatayama.InspectorAutoAssigner
 {
+    /// <summary>
+    /// Custom property drawer that adds an automatic assignment button to the right of property fields of type GameObject or Component.
+    /// Depending on the Unity editor's Inspector display mode, the following methods are called:
+    /// - If UI Toolkit is enabled: CreatePropertyGUI() is called (OnGUI() is ignored).
+    /// - If the conventional IMGUI is enabled: OnGUI() is called (CreatePropertyGUI() is ignored).
+    /// Two processes are prepared for compatibility with other inspector extension OSS.
+    /// </summary>
     [CustomPropertyDrawer(typeof(GameObject), true)]
     [CustomPropertyDrawer(typeof(Component), true)]
     public class AutoAssignmentObjectField : PropertyDrawer
     {
+        // Variable to cache the button style for IMGUI.
+        private GUIStyle _searchButtonStyle;
+
+        public override VisualElement CreatePropertyGUI(SerializedProperty property)
+        {
+            Type fieldType = fieldInfo.FieldType;
+            if (IsListOrArray(fieldType))
+            {
+                return new PropertyField(property);
+            }
+
+            VisualElement container = new VisualElement();
+            container.style.flexDirection = FlexDirection.Row;
+
+            PropertyField propertyField = new PropertyField(property);
+            propertyField.style.flexGrow = 1;
+            container.Add(propertyField);
+
+            Button searchButton = new Button();
+            float buttonSize = EditorGUIUtility.singleLineHeight;
+            searchButton.style.width = buttonSize;
+            searchButton.style.height = buttonSize;
+            searchButton.style.alignItems = Align.Center;
+
+            Image iconImage = new Image
+            {
+                image = EditorGUIUtility.FindTexture("Search Icon"),
+                scaleMode = ScaleMode.ScaleToFit
+            };
+            // Removed icon size adjustment to match the original code.
+            iconImage.style.width = buttonSize * 0.8f;
+            iconImage.style.height = buttonSize * 0.8f;
+
+            searchButton.Clear();
+            searchButton.Add(iconImage);
+
+            searchButton.clicked += () => 
+            { 
+                HandleButtonPress(property, fieldInfo.FieldType, searchButton.worldBound);
+            };
+            container.Add(searchButton);
+            
+            return container;
+        }
+
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             Type fieldType = fieldInfo.FieldType;
-            // フィールドが配列またはリストの場合、デフォルトの描画を行い、カスタムボタンを追加しない
-            if (fieldType.IsArray || (fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)))
+            if (IsListOrArray(fieldType))
             {
                 EditorGUI.PropertyField(position, property, label, true);
             }
@@ -25,132 +79,145 @@ namespace io.github.hatayama
 
         private void DrawObjectFieldWithButton(Rect position, SerializedProperty property, GUIContent label, Type fieldType)
         {
-            // プロパティの開始
             EditorGUI.BeginProperty(position, label, property);
 
-            // ラベルとフィールドの Rect を取得
+            // Draw the label part.
             position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
 
-            // インデントレベルを保存して0に設定（インデントの影響を受けないように）
             int indent = EditorGUI.indentLevel;
             EditorGUI.indentLevel = 0;
 
-            // ボタンの幅を定義
-            float buttonWidth = 25;
+            float buttonSize = EditorGUIUtility.singleLineHeight;
+            float buttonWidth = buttonSize; // Button width is the same as height
+            float objectFieldWidth = position.width - buttonWidth; // Calculate the object field width
 
-            // フィールド全体の幅
-            float fieldWidth = position.width;
-
-            // ObjectField の幅を計算（ボタンの幅を引く）
-            float objectFieldWidth = fieldWidth - buttonWidth;
-
-            // ObjectField の描画エリア
+            // Calculate the drawing range for each control.
             Rect objectFieldRect = new Rect(position.x, position.y, objectFieldWidth, position.height);
-
-            // ボタンの描画エリア
             Rect buttonRect = new Rect(position.x + objectFieldWidth, position.y, buttonWidth, position.height);
 
-            // ObjectField を描画
+            // Draw the object field.
             EditorGUI.PropertyField(objectFieldRect, property, GUIContent.none);
 
-            // ボタンを描画
-            if (GUI.Button(buttonRect, EditorGUIUtility.FindTexture("Search Icon")))
+            if (_searchButtonStyle == null)
             {
-                // ボタンが押されたときの処理
+                int padding = 2;
+                _searchButtonStyle = new GUIStyle(GUI.skin.button)
+                {
+                    padding = new RectOffset(padding, padding, padding, padding), // Reduce padding to make the icon appear larger.
+                    alignment = TextAnchor.MiddleCenter, // Center the icon.
+                    imagePosition = ImagePosition.ImageOnly // Display only the icon.
+                };
+            }
+
+            // Get the icon.
+            Texture2D searchIcon = EditorGUIUtility.FindTexture("Search Icon");
+            GUIContent searchButtonContent = new GUIContent(searchIcon); // Create GUIContent with only the icon.
+
+            // Draw the button with a custom style.
+            if (GUI.Button(buttonRect, searchButtonContent, _searchButtonStyle))
+            {
+                // Call the popup display process when the button is pressed.
                 HandleButtonPress(property, fieldType, buttonRect);
             }
 
-            // インデントレベルを元に戻す
-            EditorGUI.indentLevel = indent;
+            // ---- End of icon button drawing process ----
 
-            // プロパティの終了
+            EditorGUI.indentLevel = indent; // Restore the indent level.
+
             EditorGUI.EndProperty();
         }
 
-        /// <summary>
-        /// ボタンが押されたときの処理
-        /// </summary>
-        /// <param name="property">対象の SerializedProperty</param>
-        /// <param name="fieldType">フィールドの型</param>
-        /// <param name="buttonRect">ボタンの Rect</param>
-        private void HandleButtonPress(SerializedProperty property, Type fieldType, Rect buttonRect)
+        private void HandleButtonPress(SerializedProperty property, Type fieldType, Rect buttonWorldBound)
         {
+            UnityEngine.Object targetObject = property.serializedObject.targetObject;
+            if (!(targetObject is Component component)) return;
+
             if (fieldType == typeof(GameObject) || fieldType.IsSubclassOf(typeof(GameObject)))
             {
-                HandleGameObjectAssignment(property, buttonRect);
+                HandleGameObjectAssignment(property, buttonWorldBound, component);
                 return;
             }
-            if (fieldType.IsSubclassOf(typeof(Component)))
+            
+            if (typeof(Component).IsAssignableFrom(fieldType))
             {
-                HandleComponentAssignment(property, fieldType, buttonRect);
+                HandleComponentAssignment(property, fieldType, buttonWorldBound, component);
                 return;
             }
         }
 
-        private void HandleGameObjectAssignment(SerializedProperty property, Rect buttonRect)
+        private void HandleGameObjectAssignment(SerializedProperty property, Rect buttonRect, Component component)
         {
-            UnityEngine.Object targetObject = property.serializedObject.targetObject;
-            if (!(targetObject is MonoBehaviour)) return;
+            GameObject targetGameObject = component.gameObject;
 
-            MonoBehaviour monoBehaviour = (MonoBehaviour)targetObject;
-            GameObject gameObject = monoBehaviour.gameObject;
+            List<GameObject> gameObjects = new List<GameObject>();
+            GetSelfAndChildGameObjects(targetGameObject.transform, gameObjects);
 
-            List<GameObject> gameObjects = new List<GameObject> { gameObject };
-            GetChildGameObjects(gameObject.transform, gameObjects);
-
-            if (gameObjects.Count == 0)
-            {
-                PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup("GameObject が見つかりませんでした。"));
-                return;
-            }
-
-            if (gameObjects.Count == 1)
-            {
-                AssignValue(property, gameObjects[0]);
-                return;
-            }
-
-            string cleanName = GetCleanPropertyName(property.name);
-            GameObject matchingObject = gameObjects.Find((GameObject go) => string.Equals(go.name, cleanName, StringComparison.OrdinalIgnoreCase));
-            if (matchingObject != null)
-            {
-                AssignValue(property, matchingObject);
-                return;
-            }
-
-            PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, gameObjects.ToArray()));
+            ProcessAssignmentCandidates<GameObject>(
+                property,
+                buttonRect,
+                gameObjects,
+                "GameObject",
+                (go, name) => string.Equals(go.name, name, StringComparison.OrdinalIgnoreCase)
+            );
         }
 
-        private void HandleComponentAssignment(SerializedProperty property, Type fieldType, Rect buttonRect)
+        private void HandleComponentAssignment(SerializedProperty property, Type fieldType, Rect buttonRect, Component component)
         {
-            UnityEngine.Object targetObject = property.serializedObject.targetObject;
-            if (!(targetObject is MonoBehaviour)) return;
+            GameObject targetGameObject = component.gameObject;
 
-            MonoBehaviour monoBehaviour = (MonoBehaviour)targetObject;
-            GameObject gameObject = monoBehaviour.gameObject;
+            Component[] foundComponents = targetGameObject.GetComponentsInChildren(fieldType, true);
+            List<Component> allComponents = new List<Component>(foundComponents);
 
-            Component[] components = gameObject.GetComponentsInChildren(fieldType, true);
-            if (components == null || components.Length == 0)
+            if (allComponents.Count == 0)
             {
-                PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} コンポーネントが見つかりませんでした。"));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{fieldType.Name} component not found."));
                 return;
             }
 
-            if (components.Length == 1)
+            if (allComponents.Count == 1)
             {
-                AssignValue(property, components[0]);
+                AssignValue(property, allComponents[0]);
+                return;
+            }
+
+            ProcessAssignmentCandidates<Component>(
+                property,
+                buttonRect,
+                allComponents,
+                fieldType.Name,
+                (comp, name) => string.Equals(comp.gameObject.name, name, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        private void ProcessAssignmentCandidates<T>(
+            SerializedProperty property,
+            Rect buttonRect,
+            IEnumerable<T> candidates,
+            string typeName,
+            Func<T, string, bool> nameMatcher
+        ) where T : UnityEngine.Object
+        {
+            List<T> candidateList = candidates.ToList();
+
+            if (candidateList.Count == 0)
+            {
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentMessagePopup($"{typeName} not found."));
                 return;
             }
 
             string cleanName = GetCleanPropertyName(property.name);
-            Component matchingComponent = Array.Find(components, comp => string.Equals(comp.gameObject.name, cleanName, StringComparison.OrdinalIgnoreCase));
-            if (matchingComponent != null)
+
+            T matchingCandidate = candidateList.FirstOrDefault(c => nameMatcher(c, cleanName));
+
+            if (matchingCandidate != null)
             {
-                AssignValue(property, matchingComponent);
+                AssignValue(property, matchingCandidate);
+                return;
             }
-            else
+
+            if (candidateList.Count > 1)
             {
-                PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, components));
+                UnityEditor.PopupWindow.Show(buttonRect, new AutoAssignmentObjectSelectorPopup(property, candidateList.ToArray()));
             }
         }
 
@@ -160,28 +227,29 @@ namespace io.github.hatayama
             return underscoreIndex >= 0 ? propertyName.Substring(underscoreIndex + 1) : propertyName;
         }
 
-        /// <summary>
-        /// プロパティに値を代入する
-        /// </summary>
         private void AssignValue(SerializedProperty property, UnityEngine.Object value)
         {
-            // 値を代入
             property.objectReferenceValue = value;
-            // 変更を適用
             property.serializedObject.ApplyModifiedProperties();
         }
 
         /// <summary>
-        /// 子オブジェクトを取得する（再帰）
+        /// Adds the GameObject itself and all its descendant GameObjects to the list (recursive process).
         /// </summary>
-        private void GetChildGameObjects(Transform parent, List<GameObject> list)
+        /// <param name="targetTransform">The Transform to start searching from.</param>
+        /// <param name="list">The list to add GameObjects to.</param>
+        private void GetSelfAndChildGameObjects(Transform targetTransform, List<GameObject> list)
         {
-            foreach (Transform child in parent)
+            list.Add(targetTransform.gameObject);
+            foreach (Transform child in targetTransform)
             {
-                list.Add(child.gameObject);
-                // 子孫も取得する場合は再帰呼び出し
-                GetChildGameObjects(child, list);
+                GetSelfAndChildGameObjects(child, list);
             }
+        }
+
+        private bool IsListOrArray(Type type)
+        {
+            return type.IsArray || (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>));
         }
     }
 }
