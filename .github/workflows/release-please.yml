@@ -37,4 +37,5 @@ jobs:
         with:
           path: Packages/src
           release-type: node
+          package-name: "io.github.hatayama.inspectorautoassigner"
           token: ${{ secrets.GITHUB_TOKEN }}
