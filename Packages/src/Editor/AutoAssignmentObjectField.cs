@@ -223,8 +223,19 @@ namespace io.github.hatayama.InspectorAutoAssigner
 
         private string GetCleanPropertyName(string propertyName)
         {
-            int underscoreIndex = propertyName.IndexOf('_');
-            return underscoreIndex >= 0 ? propertyName.Substring(underscoreIndex + 1) : propertyName;
+            // Handle Unity naming convention: single character + underscore (e.g., m_, s_, k_, etc.)
+            if (propertyName.Length >= 3 && propertyName[1] == '_')
+            {
+                return propertyName.Substring(2);
+            }
+            
+            // Handle leading underscore (e.g., _fieldName)
+            if (propertyName.StartsWith("_"))
+            {
+                return propertyName.Substring(1);
+            }
+            
+            return propertyName;
         }
 
         private void AssignValue(SerializedProperty property, UnityEngine.Object value)
