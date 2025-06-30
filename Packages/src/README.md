@@ -53,7 +53,3 @@ openupm add io.github.hatayama.inspectorautoassigner
 ## License
 
 MIT License
-
-## Author
-
-Masamichi Hatayama
