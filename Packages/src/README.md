@@ -36,7 +36,7 @@ InspectorAutoAssigner is a tool that automatically assigns values in the Unity I
 ```
 Name：OpenUPM
 URL: https://package.openupm.com
-Scope(s)：io.github.hatayama
+Scope(s)：io.github.hatayama.inspectorautoassigner
 ```
 ![](https://github.com/hatayama/_Docs/blob/main/Images/upm_pckage1.png?raw=true)
 
